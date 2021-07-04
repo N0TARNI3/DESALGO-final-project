@@ -1,11 +1,9 @@
-let graph = {
-	start: { A: 5, B: 2 },
-	A: { start: 1, C: 4, D: 2 },
-	B: { A: 8, D: 7 },
-	C: { D: 6, finish: 3 },
-	D: { finish: 1 },
-	finish: {},
-};
+var PathFinder = require('geojson-path-finder');
+var Queue = require('tinyqueue');
+var geojson = require('./geojson/stamesa_singleLine.json');
+
+var geojsonGraph = new PathFinder(geojson);
+console.log(geojsonGraph);
 
 const shortestDistanceNode = (distances, visited) => {
 	let shortest = null;
@@ -92,6 +90,8 @@ const findShortestPathWithLogs = (graph, startNode, endNode) => {
 	};
 
 	return results;
-};
+}
 
-findShortestPathWithLogs(graph, 'start', 'end');
+var path = findShortestPathWithLogs(geojsonGraph._graph.compactedVertices,'120.98,14.600700000000002','120.97957000000001,14.601210000000002');
+console.log("SHORTEST PATH: " + path.path);
+console.log("SHORTEST DISTANCE: " + path.distance);
