@@ -9,6 +9,7 @@
     integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
     crossorigin=""/>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <link rel="stylesheet" href="./assets/jquery.typeahead.min.css">
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Alice&family=Raleway:wght@400;800&display=swap" rel="stylesheet">
 </head>
@@ -39,17 +40,33 @@
     <div id="container">
         <div id="sidebar">
             <h2>COVID TESTING CENTER MAP ROUTER</h2>
-            <form class="mt-5">
+            <form cl>
+                <div class="typeahead__container">
+                    <div class="typeahead__field">
+                        <div class="typeahead__query">
+                            <input class="js-typeahead-centers"
+                                   name="q"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+                <div class="typeahead__button">
+                    <button type="submit">
+                        <span class="typeahead__search-icon"></span>
+                    </button>
+                </div>
+            </form>
+            <!---<form class="mt-5">
                 <div class="form-group">
                     <label for="exampleInputEmail1">Your Location</label>
                     <input type="text" name="start" class="form-control" placeholder="Starting point">
                 </div>
                 <div class="form-group">
                     <label for="exampleInputEmail1">COVID Testing Center</label>
-                    <input type="text" name="end" class="form-control" placeholder="End point">
+                    <input type="text" name="q" class="form-control typeaheadCenters" placeholder="End point">
                 </div>
                 <button class="btn btn-primary" type="submit">FIND PATH</button>
-            </form>
+            </form>--->
         </div>
         <div id="map"></div>
     </div>
@@ -62,7 +79,7 @@
    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
-    <script src="./scripts/script.js"></script>
+    <script src="./assets/jquery.typeahead.min.js"></script>
     <script type="module" src="./scripts/bundle.js"></script>
 </body>
 </html>

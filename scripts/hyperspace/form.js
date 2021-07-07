@@ -2,7 +2,7 @@ require('jquery-typeahead')
 var $ = require('jquery')
 var meta = require('@turf/meta')
 var featureEach = meta.featureEach
-var Router = require('./hyperspace-router')
+var Router = require('./manila-router')
 
 module.exports = PlanetsAutocomplete
 
