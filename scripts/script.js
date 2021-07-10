@@ -2,8 +2,14 @@
 var L = require('leaflet')
 var $ = require('jquery')
 require('jquery-typeahead')
+var PathFinder = require('geojson-path-finder')
 var meta = require('@turf/meta')
 var featureEach = meta.featureEach
+var invariant_1 = require("@turf/invariant")
+var helpers = require("@turf/helpers")
+var featureCollection = helpers.featureCollection
+var nearestPoint = require('@turf/nearest-point').default
+var point = helpers.point
 window.jQuery = window.$ = $
 
 var testing_centers
@@ -39,6 +45,8 @@ function initialize(points){
     zoomOffset: -1
   }).addTo(map);
 
+  var pathfinder = Router.createPathFinder(roads, map)
+
   //plot testing centers on the map
   var geojsonMarkerOptions = {
       radius: 8,
@@ -69,13 +77,16 @@ function onEachFeature(feature, layer) {
 //autocomplete form input
 function VerticesAutocomplete (vertices) {
   var vertexNames = []
+  var centerNames = []
 
   featureEach(vertices, function (currentFeature, featureIndex) {
     vertexNames.push({
       id: featureIndex,
-      display: currentFeature.properties.name
+      display: currentFeature.properties.name,
+      coordinates: currentFeature.properties.name
     })
   })
+  centerNames = vertexNames.slice(-13)
   $.typeahead({
     input: '.js-typeahead',
     minLength: 1,
@@ -85,7 +96,7 @@ function VerticesAutocomplete (vertices) {
       data: vertexNames
     },
     multiselect: {
-      limit: 2,
+      limit: 1,
       limitTemplate: 'You can\'t select more than 2 vertices',
       matchOn: ['id'],
       cancelOnBackspace: true,
@@ -94,7 +105,6 @@ function VerticesAutocomplete (vertices) {
           console.log(item)
         },
         onCancel: function (node, item, event) {
-          Router.removePlanetMarker(item.id)
           console.log(item.display + ' Removed!')
         }
       }
@@ -106,20 +116,187 @@ function VerticesAutocomplete (vertices) {
     '</span>'
     },
     callback: {
-      onInit: function (node) {
-        // console.log('Typeahead Initiated on ' + node.selector)
-      },
-      onClick: function (node, a, item, event) {
-        Router.addPlanetMarker(item.id, vertices.features[item.id])
-      },
       onSubmit: function (node, form, item, event) {
         event.preventDefault()
         var start = vertices.features[item[0].id]
-        var finish = vertices.features[item[1].id]
-        createRoute(start, finish)
+        var distances = []
+
+        //calculate distance to all testing centers
+        for(let i=0; i<centerNames.length; i++){
+          var from = point([start.geometry.coordinates[0], start.geometry.coordinates[1]]);
+          var to = point([vertices.features[centerNames[i].id].geometry.coordinates[0], vertices.features[centerNames[i].id].geometry.coordinates[1]]);
+          var options = {units: 'kilometers'};
+          distances.push({
+            id: centerNames[i].id,
+            name: vertices.features[centerNames[i].id].properties.name,
+            distance: distance(from, to, options)
+          })
+        }
+
+        //sort distances array to get nearest        
+        distances.sort((a, b) => {
+            return a.distance - b.distance;
+        })
+
+        //display nearest testing center
+        $('#nearest-center h4').html(distances[0].name)
+        $('#nearest-center p').html("Distance: "+distances[0].distance.toFixed(2)+"km")
+        $('#nearest-center h4.heading').html("Nearest COVID Testing Center:")
+        
+        //find shortest path to nearest COVID Testing Center
+        var finish = vertices.features[distances[0].id]
+        Router.createRoute(start, finish)
       }
     }
   })
 }
 
-createRoute (start, finish)
+//calculate distance of two points
+function distance(from, to, options) {
+  if (options === void 0) { options = {}; }
+  var coordinates1 = invariant_1.getCoord(from);
+  var coordinates2 = invariant_1.getCoord(to);
+  var dLat = helpers.degreesToRadians(coordinates2[1] - coordinates1[1]);
+  var dLon = helpers.degreesToRadians(coordinates2[0] - coordinates1[0]);
+  var lat1 = helpers.degreesToRadians(coordinates1[1]);
+  var lat2 = helpers.degreesToRadians(coordinates2[1]);
+  var a = Math.pow(Math.sin(dLat / 2), 2) +
+      Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1) * Math.cos(lat2);
+  return helpers.radiansToLength(2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)), options.units);
+}
+
+//router constructor
+var Router = {
+  pathfinder: {}, // pathfinder object
+  _points: {}, // network vertices
+  pathBboxRectangeLayer: {},
+  _route: {},
+  routePath: {}, // linestring object name:path
+  routePathLayerGroup: {}, // leaflet path layer
+  planetMarkerPathPoints: [], // planets markers
+  map: {}, // leaflet map
+  createPathFinder: function (network, map) {
+    this.map = map
+    this.pathFinder = new PathFinder(network, { precision: 1e-15 })
+    console.log(this.pathFinder)
+    var pathfinder = this.pathFinder
+    var vertices = this.pathFinder._graph.compactedVertices
+
+    this._points = featureCollection(Object.keys(vertices)
+      .filter(function (nodeName) {
+        return Object.keys(vertices[nodeName]).length
+      })
+      .map(function (nodeName) {
+        var vertice = pathfinder._graph.sourceVertices[nodeName]
+        return point(vertice)
+      }))
+    console.log('_points array lenght:')
+    console.log(this._points.features.length)
+  },
+
+  // {start}, {finish}: planet features
+  createRoute: function (start, finish) {
+    this._route.name = { start: start.properties.name, finish: finish.properties.name }
+    var waypoints = [start, finish]
+    var pathfinder = this.pathFinder
+    // check if input waypoints are included in the network vertices
+    // if not, update the waypoint to the nearest point in the network vertices
+    var actualWaypoints = waypoints.map(function (wp) {
+      var nearest = nearestPoint(wp, this._points) // turf.nearestPoint()
+      return nearest
+    }.bind(this))
+    console.log(actualWaypoints)
+    var shortest_path = findShortestPathWithLogs(pathfinder._graph.compactedVertices, actualWaypoints[0].geometry.coordinates, actualWaypoints[1].geometry.coordinates)
+    
+  }
+  
+}
+
+const shortestDistanceNode = (distances, visited) => {
+	let shortest = null;
+
+	for (let node in distances) {
+		let currentIsShortest =
+			shortest === null || distances[node] < distances[shortest];
+		if (currentIsShortest && !visited.includes(node)) {
+			shortest = node;
+		}
+	}
+	return shortest;
+};
+
+const findShortestPathWithLogs = (graph, startNode, endNode) => {
+	// establish object for recording distances from the start node
+	let distances = {};
+	distances[endNode] = "Infinity";
+	distances = Object.assign(distances, graph[startNode]);
+
+	// track paths
+	let parents = { endNode: null };
+	for (let child in graph[startNode]) {
+		parents[child] = startNode;
+	}
+
+	// track nodes that have already been visited
+	let visited = [];
+
+	// find the nearest node
+	let node = shortestDistanceNode(distances, visited);
+
+	// for that node
+	while (node) {
+		// find its distance from the start node & its child nodes
+		let distance = distances[node];
+		let children = graph[node];
+		// for each of those child nodes
+		for (let child in children) {
+			// make sure each child node is not the start node
+			if (String(child) === String(startNode)) {
+				console.log("don't return to the start node! 🙅");
+				continue;
+			} else {
+				console.log("startNode: " + startNode); 
+				console.log("distance from node " + parents[node] + " to node " + node + ")");
+				console.log("previous distance: " + distances[node]);
+				// save the distance from the start node to the child node
+				let newdistance = distance + children[child];
+				console.log("new distance: " + newdistance);
+				// if there's no recorded distance from the start node to the child node in the distances object
+				// or if the recorded distance is shorter than the previously stored distance from the start node to the child node
+				// save the distance to the object
+				// record the path
+				if (!distances[child] || distances[child] > newdistance) {
+					distances[child] = newdistance;
+					parents[child] = node;
+					console.log("distance + parents updated");
+				} else {
+					console.log("not updating, because a shorter path already exists!");
+				}
+			}
+		}
+		// move the node to the visited set
+		visited.push(node);
+		// move to the nearest neighbor node
+		node = shortestDistanceNode(distances, visited);
+	}
+
+	// using the stored paths from start node to end node
+	// record the shortest path
+	let shortestPath = [endNode];
+	let parent = parents[endNode];
+	while (parent) {
+		shortestPath.push(parent);
+		parent = parents[parent];
+	}
+	shortestPath.reverse();
+
+	// return the shortest path from start node to end node & its distance
+	let results = {
+		distance: distances[endNode],
+		path: shortestPath,
+	};
+
+	return results;
+};
+
+module.exports = findShortestPathWithLogs;

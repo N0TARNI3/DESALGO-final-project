@@ -27,6 +27,7 @@ var Router = {
   createPathFinder: function (network, map) {
     this.map = map
     this.pathFinder = new PathFinder(network, { precision: 1e-15 })
+    console.log(this.pathFinder)
     var pathfinder = this.pathFinder
     var vertices = this.pathFinder._graph.vertices
 
