@@ -2842,7 +2842,7 @@ module.exports = function(graph, start, end) {
 
     return null;
 }
-},{"tinyqueue":17}],10:[function(require,module,exports){
+},{"tinyqueue":36}],10:[function(require,module,exports){
 'use strict';
 
 var findPath = require('./dijkstra'),
@@ -28090,6 +28090,551 @@ return jQuery;
 
 
 },{}],17:[function(require,module,exports){
+var root = require('./_root');
+
+/** Built-in value references. */
+var Symbol = root.Symbol;
+
+module.exports = Symbol;
+
+},{"./_root":26}],18:[function(require,module,exports){
+/**
+ * The base implementation of `_.findIndex` and `_.findLastIndex` without
+ * support for iteratee shorthands.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {Function} predicate The function invoked per iteration.
+ * @param {number} fromIndex The index to search from.
+ * @param {boolean} [fromRight] Specify iterating from right to left.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ */
+function baseFindIndex(array, predicate, fromIndex, fromRight) {
+  var length = array.length,
+      index = fromIndex + (fromRight ? 1 : -1);
+
+  while ((fromRight ? index-- : ++index < length)) {
+    if (predicate(array[index], index, array)) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+module.exports = baseFindIndex;
+
+},{}],19:[function(require,module,exports){
+var Symbol = require('./_Symbol'),
+    getRawTag = require('./_getRawTag'),
+    objectToString = require('./_objectToString');
+
+/** `Object#toString` result references. */
+var nullTag = '[object Null]',
+    undefinedTag = '[object Undefined]';
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * The base implementation of `getTag` without fallbacks for buggy environments.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the `toStringTag`.
+ */
+function baseGetTag(value) {
+  if (value == null) {
+    return value === undefined ? undefinedTag : nullTag;
+  }
+  return (symToStringTag && symToStringTag in Object(value))
+    ? getRawTag(value)
+    : objectToString(value);
+}
+
+module.exports = baseGetTag;
+
+},{"./_Symbol":17,"./_getRawTag":24,"./_objectToString":25}],20:[function(require,module,exports){
+var baseFindIndex = require('./_baseFindIndex'),
+    baseIsNaN = require('./_baseIsNaN'),
+    strictIndexOf = require('./_strictIndexOf');
+
+/**
+ * The base implementation of `_.indexOf` without `fromIndex` bounds checks.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {*} value The value to search for.
+ * @param {number} fromIndex The index to search from.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ */
+function baseIndexOf(array, value, fromIndex) {
+  return value === value
+    ? strictIndexOf(array, value, fromIndex)
+    : baseFindIndex(array, baseIsNaN, fromIndex);
+}
+
+module.exports = baseIndexOf;
+
+},{"./_baseFindIndex":18,"./_baseIsNaN":21,"./_strictIndexOf":27}],21:[function(require,module,exports){
+/**
+ * The base implementation of `_.isNaN` without support for number objects.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is `NaN`, else `false`.
+ */
+function baseIsNaN(value) {
+  return value !== value;
+}
+
+module.exports = baseIsNaN;
+
+},{}],22:[function(require,module,exports){
+var trimmedEndIndex = require('./_trimmedEndIndex');
+
+/** Used to match leading whitespace. */
+var reTrimStart = /^\s+/;
+
+/**
+ * The base implementation of `_.trim`.
+ *
+ * @private
+ * @param {string} string The string to trim.
+ * @returns {string} Returns the trimmed string.
+ */
+function baseTrim(string) {
+  return string
+    ? string.slice(0, trimmedEndIndex(string) + 1).replace(reTrimStart, '')
+    : string;
+}
+
+module.exports = baseTrim;
+
+},{"./_trimmedEndIndex":28}],23:[function(require,module,exports){
+(function (global){(function (){
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
+
+module.exports = freeGlobal;
+
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],24:[function(require,module,exports){
+var Symbol = require('./_Symbol');
+
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/** Used to check objects for own properties. */
+var hasOwnProperty = objectProto.hasOwnProperty;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/** Built-in value references. */
+var symToStringTag = Symbol ? Symbol.toStringTag : undefined;
+
+/**
+ * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
+ *
+ * @private
+ * @param {*} value The value to query.
+ * @returns {string} Returns the raw `toStringTag`.
+ */
+function getRawTag(value) {
+  var isOwn = hasOwnProperty.call(value, symToStringTag),
+      tag = value[symToStringTag];
+
+  try {
+    value[symToStringTag] = undefined;
+    var unmasked = true;
+  } catch (e) {}
+
+  var result = nativeObjectToString.call(value);
+  if (unmasked) {
+    if (isOwn) {
+      value[symToStringTag] = tag;
+    } else {
+      delete value[symToStringTag];
+    }
+  }
+  return result;
+}
+
+module.exports = getRawTag;
+
+},{"./_Symbol":17}],25:[function(require,module,exports){
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var nativeObjectToString = objectProto.toString;
+
+/**
+ * Converts `value` to a string using `Object.prototype.toString`.
+ *
+ * @private
+ * @param {*} value The value to convert.
+ * @returns {string} Returns the converted string.
+ */
+function objectToString(value) {
+  return nativeObjectToString.call(value);
+}
+
+module.exports = objectToString;
+
+},{}],26:[function(require,module,exports){
+var freeGlobal = require('./_freeGlobal');
+
+/** Detect free variable `self`. */
+var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root = freeGlobal || freeSelf || Function('return this')();
+
+module.exports = root;
+
+},{"./_freeGlobal":23}],27:[function(require,module,exports){
+/**
+ * A specialized version of `_.indexOf` which performs strict equality
+ * comparisons of values, i.e. `===`.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {*} value The value to search for.
+ * @param {number} fromIndex The index to search from.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ */
+function strictIndexOf(array, value, fromIndex) {
+  var index = fromIndex - 1,
+      length = array.length;
+
+  while (++index < length) {
+    if (array[index] === value) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+module.exports = strictIndexOf;
+
+},{}],28:[function(require,module,exports){
+/** Used to match a single whitespace character. */
+var reWhitespace = /\s/;
+
+/**
+ * Used by `_.trim` and `_.trimEnd` to get the index of the last non-whitespace
+ * character of `string`.
+ *
+ * @private
+ * @param {string} string The string to inspect.
+ * @returns {number} Returns the index of the last non-whitespace character.
+ */
+function trimmedEndIndex(string) {
+  var index = string.length;
+
+  while (index-- && reWhitespace.test(string.charAt(index))) {}
+  return index;
+}
+
+module.exports = trimmedEndIndex;
+
+},{}],29:[function(require,module,exports){
+var baseIndexOf = require('./_baseIndexOf'),
+    toInteger = require('./toInteger');
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeMax = Math.max;
+
+/**
+ * Gets the index at which the first occurrence of `value` is found in `array`
+ * using [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
+ * for equality comparisons. If `fromIndex` is negative, it's used as the
+ * offset from the end of `array`.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Array
+ * @param {Array} array The array to inspect.
+ * @param {*} value The value to search for.
+ * @param {number} [fromIndex=0] The index to search from.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ * @example
+ *
+ * _.indexOf([1, 2, 1, 2], 2);
+ * // => 1
+ *
+ * // Search from the `fromIndex`.
+ * _.indexOf([1, 2, 1, 2], 2, 2);
+ * // => 3
+ */
+function indexOf(array, value, fromIndex) {
+  var length = array == null ? 0 : array.length;
+  if (!length) {
+    return -1;
+  }
+  var index = fromIndex == null ? 0 : toInteger(fromIndex);
+  if (index < 0) {
+    index = nativeMax(length + index, 0);
+  }
+  return baseIndexOf(array, value, index);
+}
+
+module.exports = indexOf;
+
+},{"./_baseIndexOf":20,"./toInteger":34}],30:[function(require,module,exports){
+/**
+ * Checks if `value` is the
+ * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
+ * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+ * @example
+ *
+ * _.isObject({});
+ * // => true
+ *
+ * _.isObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isObject(_.noop);
+ * // => true
+ *
+ * _.isObject(null);
+ * // => false
+ */
+function isObject(value) {
+  var type = typeof value;
+  return value != null && (type == 'object' || type == 'function');
+}
+
+module.exports = isObject;
+
+},{}],31:[function(require,module,exports){
+/**
+ * Checks if `value` is object-like. A value is object-like if it's not `null`
+ * and has a `typeof` result of "object".
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+ * @example
+ *
+ * _.isObjectLike({});
+ * // => true
+ *
+ * _.isObjectLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isObjectLike(_.noop);
+ * // => false
+ *
+ * _.isObjectLike(null);
+ * // => false
+ */
+function isObjectLike(value) {
+  return value != null && typeof value == 'object';
+}
+
+module.exports = isObjectLike;
+
+},{}],32:[function(require,module,exports){
+var baseGetTag = require('./_baseGetTag'),
+    isObjectLike = require('./isObjectLike');
+
+/** `Object#toString` result references. */
+var symbolTag = '[object Symbol]';
+
+/**
+ * Checks if `value` is classified as a `Symbol` primitive or object.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
+ * @example
+ *
+ * _.isSymbol(Symbol.iterator);
+ * // => true
+ *
+ * _.isSymbol('abc');
+ * // => false
+ */
+function isSymbol(value) {
+  return typeof value == 'symbol' ||
+    (isObjectLike(value) && baseGetTag(value) == symbolTag);
+}
+
+module.exports = isSymbol;
+
+},{"./_baseGetTag":19,"./isObjectLike":31}],33:[function(require,module,exports){
+var toNumber = require('./toNumber');
+
+/** Used as references for various `Number` constants. */
+var INFINITY = 1 / 0,
+    MAX_INTEGER = 1.7976931348623157e+308;
+
+/**
+ * Converts `value` to a finite number.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.12.0
+ * @category Lang
+ * @param {*} value The value to convert.
+ * @returns {number} Returns the converted number.
+ * @example
+ *
+ * _.toFinite(3.2);
+ * // => 3.2
+ *
+ * _.toFinite(Number.MIN_VALUE);
+ * // => 5e-324
+ *
+ * _.toFinite(Infinity);
+ * // => 1.7976931348623157e+308
+ *
+ * _.toFinite('3.2');
+ * // => 3.2
+ */
+function toFinite(value) {
+  if (!value) {
+    return value === 0 ? value : 0;
+  }
+  value = toNumber(value);
+  if (value === INFINITY || value === -INFINITY) {
+    var sign = (value < 0 ? -1 : 1);
+    return sign * MAX_INTEGER;
+  }
+  return value === value ? value : 0;
+}
+
+module.exports = toFinite;
+
+},{"./toNumber":35}],34:[function(require,module,exports){
+var toFinite = require('./toFinite');
+
+/**
+ * Converts `value` to an integer.
+ *
+ * **Note:** This method is loosely based on
+ * [`ToInteger`](http://www.ecma-international.org/ecma-262/7.0/#sec-tointeger).
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to convert.
+ * @returns {number} Returns the converted integer.
+ * @example
+ *
+ * _.toInteger(3.2);
+ * // => 3
+ *
+ * _.toInteger(Number.MIN_VALUE);
+ * // => 0
+ *
+ * _.toInteger(Infinity);
+ * // => 1.7976931348623157e+308
+ *
+ * _.toInteger('3.2');
+ * // => 3
+ */
+function toInteger(value) {
+  var result = toFinite(value),
+      remainder = result % 1;
+
+  return result === result ? (remainder ? result - remainder : result) : 0;
+}
+
+module.exports = toInteger;
+
+},{"./toFinite":33}],35:[function(require,module,exports){
+var baseTrim = require('./_baseTrim'),
+    isObject = require('./isObject'),
+    isSymbol = require('./isSymbol');
+
+/** Used as references for various `Number` constants. */
+var NAN = 0 / 0;
+
+/** Used to detect bad signed hexadecimal string values. */
+var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+
+/** Used to detect binary string values. */
+var reIsBinary = /^0b[01]+$/i;
+
+/** Used to detect octal string values. */
+var reIsOctal = /^0o[0-7]+$/i;
+
+/** Built-in method references without a dependency on `root`. */
+var freeParseInt = parseInt;
+
+/**
+ * Converts `value` to a number.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to process.
+ * @returns {number} Returns the number.
+ * @example
+ *
+ * _.toNumber(3.2);
+ * // => 3.2
+ *
+ * _.toNumber(Number.MIN_VALUE);
+ * // => 5e-324
+ *
+ * _.toNumber(Infinity);
+ * // => Infinity
+ *
+ * _.toNumber('3.2');
+ * // => 3.2
+ */
+function toNumber(value) {
+  if (typeof value == 'number') {
+    return value;
+  }
+  if (isSymbol(value)) {
+    return NAN;
+  }
+  if (isObject(value)) {
+    var other = typeof value.valueOf == 'function' ? value.valueOf() : value;
+    value = isObject(other) ? (other + '') : other;
+  }
+  if (typeof value != 'string') {
+    return value === 0 ? value : +value;
+  }
+  value = baseTrim(value);
+  var isBinary = reIsBinary.test(value);
+  return (isBinary || reIsOctal.test(value))
+    ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
+    : (reIsBadHex.test(value) ? NAN : +value);
+}
+
+module.exports = toNumber;
+
+},{"./_baseTrim":22,"./isObject":30,"./isSymbol":32}],36:[function(require,module,exports){
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 typeof define === 'function' && define.amd ? define(factory) :
@@ -28184,12 +28729,13 @@ return TinyQueue;
 
 }));
 
-},{}],18:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 //import packages
 var L = require('leaflet')
 var $ = require('jquery')
 require('jquery-typeahead')
 var PathFinder = require('geojson-path-finder')
+var roundCoord = require('geojson-path-finder/round-coord')
 var meta = require('@turf/meta')
 var featureEach = meta.featureEach
 var invariant_1 = require("@turf/invariant")
@@ -28197,11 +28743,14 @@ var helpers = require("@turf/helpers")
 var featureCollection = helpers.featureCollection
 var nearestPoint = require('@turf/nearest-point').default
 var point = helpers.point
+var lineString = helpers.lineString
+var indexOf = require('lodash/indexOf')
 window.jQuery = window.$ = $
 
 var testing_centers
 var vertices
 var roads
+var map
 
 //import json thru ajax request
 $.when(
@@ -28221,7 +28770,7 @@ $.when(
 
 //initialize map
 function initialize(points){
-  var map = L.map('map').setView([14.5995, 120.9842], 14);
+  map = L.map('map').setView([14.5995, 120.9842], 14);
 
   L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
     maxZoom: 18,
@@ -28332,8 +28881,7 @@ function VerticesAutocomplete (vertices) {
         
         //find shortest path to nearest COVID Testing Center
         var finish = vertices.features[distances[0].id]
-        Router.createRoute(start, finish)
-
+        Router.createRoute(start, finish)        
       }
     }
   })
@@ -28357,12 +28905,9 @@ function distance(from, to, options) {
 var Router = {
   pathfinder: {}, // pathfinder object
   _points: {}, // network vertices
-  pathBboxRectangeLayer: {},
   _route: {},
-  routePath: {}, // linestring object name:path
-  routePathLayerGroup: {}, // leaflet path layer
-  planetMarkerPathPoints: [], // planets markers
-  map: {}, // leaflet map
+
+  //converts geojson to javascript graph object
   createPathFinder: function (network, map) {
     this.map = map
     this.pathFinder = new PathFinder(network, { precision: 1e-15 })
@@ -28382,36 +28927,80 @@ var Router = {
     console.log(this._points.features.length)
   },
 
-  // {start}, {finish}: planet features
+  // actual router function
   createRoute: function (start, finish) {
-    this._route.name = { start: start.properties.name, finish: finish.properties.name }
     var waypoints = [start, finish]
     var pathfinder = this.pathFinder
-    // check if input waypoints are included in the network vertices
-    // if not, update the waypoint to the nearest point in the network vertices
+
+    // check if input waypoints are along the roads
+    // if not, update the waypoint to the nearest point in the roads
     var actualWaypoints = waypoints.map(function (wp) {
       var nearest = nearestPoint(wp, this._points) // turf.nearestPoint()
       return nearest
     }.bind(this))
-    console.log(actualWaypoints)
-    var shortest_path = findShortestPathWithLogs(pathfinder._graph.compactedVertices, actualWaypoints[0].geometry.coordinates, actualWaypoints[1].geometry.coordinates)
-    console.log(shortest_path)
 
+    
     // create path with actualwaypoints (points in the vertices)
-    /*var legs = actualWaypoints.map(function (wp, i, wps) {
+    var legs = actualWaypoints.map(function (wp, i, wps) {
       if (i > 0) {
-        var returnedPath = pathfinder.findPath(wps[i - 1], wp)
-        // bad hack, see issue #21
-        var isInitPlanet = indexOf(returnedPath.path[0], wps[0].geometry.coordinates[0])
-        if (isInitPlanet < 0) {
-          returnedPath.path.unshift(wps[0].geometry.coordinates)
+        //get shortest path using dijkstra algo
+        var start = pathfinder._keyFn(roundCoord(wps[i - 1].geometry.coordinates, pathfinder._precision))
+        var finish = pathfinder._keyFn(roundCoord(wp.geometry.coordinates, pathfinder._precision))
+        var returnedPath = Dijkstra(pathfinder._graph.compactedVertices,start, finish)
+        console.log(returnedPath)
+        //map compacted vertices into actual vertices
+        var mappedPath = Router.mapPath(returnedPath, finish)
+        // change initial node to starting node
+        var isInitNode = indexOf(mappedPath.path[0], wps[0].geometry.coordinates[0])
+        if (isInitNode < 0) {
+          mappedPath.path.unshift(wps[0].geometry.coordinates)
         }
-        return returnedPath
+        return mappedPath
       }
       return []
     }).slice(1)
 
-    this._route.path = legs*/
+    console.log(legs)
+
+    //convert shortest path into geojson linestring feature
+    var route_shortest_path = lineString(legs[0].path, { name: 'shortest-path' })
+
+    //draw shortest path into map
+    actualWaypoints.map(function (wp, i , wps){
+      var lon = actualWaypoints[i].geometry.coordinates[0]
+      var lat = actualWaypoints[i].geometry.coordinates[1]
+      L.marker([lat, lon]).addTo(map)
+    })
+    L.geoJSON(route_shortest_path).addTo(map);       
+  },
+
+  mapPath: function(path, finish) {    
+    var pathfinder = this.pathFinder
+    if (path) {
+      var weight = path.distance;
+      path = path.path;
+      return {
+        path: path.reduce(function buildPath(cs, v, i, vs) {
+          if (i > 0) {
+            cs = cs.concat(pathfinder._graph.compactedCoordinates[vs[i - 1]][v]);
+          }  
+          return cs;
+        }.bind(pathfinder), []).concat([pathfinder._graph.sourceVertices[finish]]),
+        weight: weight,
+        edgeDatas: pathfinder._graph.compactedEdges 
+          ? path.reduce(function buildEdgeData(eds, v, i, vs) {
+            if (i > 0) {
+              eds.push({
+                reducedEdge: pathfinder._graph.compactedEdges[vs[i - 1]][v]
+              });
+            }
+            return eds;
+        }.bind(pathfinder), [])
+          : undefined
+        };
+    } else {
+      return null;
+    }
   }
 }
 
@@ -28428,7 +29017,7 @@ const shortestDistanceNode = (distances, visited) => {
 	return shortest;
 };
 
-const findShortestPathWithLogs = (graph, startNode, endNode) => {
+const Dijkstra = (graph, startNode, endNode) => {
 	// establish object for recording distances from the start node
 	let distances = {};
 	distances[endNode] = "Infinity";
@@ -28458,7 +29047,7 @@ const findShortestPathWithLogs = (graph, startNode, endNode) => {
 				console.log("don't return to the start node! 🙅");
 				continue;
 			} else {
-				console.log("startNode: " + startNode);
+				console.log("startNode: " + startNode); 
 				console.log("distance from node " + parents[node] + " to node " + node + ")");
 				console.log("previous distance: " + distances[node]);
 				// save the distance from the start node to the child node
@@ -28501,7 +29090,4 @@ const findShortestPathWithLogs = (graph, startNode, endNode) => {
 
 	return results;
 };
-
-module.exports = findShortestPathWithLogs;
-
-},{"@turf/helpers":4,"@turf/invariant":5,"@turf/meta":6,"@turf/nearest-point":7,"geojson-path-finder":10,"jquery":15,"jquery-typeahead":14,"leaflet":16}]},{},[18]);
+},{"@turf/helpers":4,"@turf/invariant":5,"@turf/meta":6,"@turf/nearest-point":7,"geojson-path-finder":10,"geojson-path-finder/round-coord":12,"jquery":15,"jquery-typeahead":14,"leaflet":16,"lodash/indexOf":29}]},{},[37]);

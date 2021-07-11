@@ -3,6 +3,7 @@ var L = require('leaflet')
 var $ = require('jquery')
 require('jquery-typeahead')
 var PathFinder = require('geojson-path-finder')
+var roundCoord = require('geojson-path-finder/round-coord')
 var meta = require('@turf/meta')
 var featureEach = meta.featureEach
 var invariant_1 = require("@turf/invariant")
@@ -10,11 +11,14 @@ var helpers = require("@turf/helpers")
 var featureCollection = helpers.featureCollection
 var nearestPoint = require('@turf/nearest-point').default
 var point = helpers.point
+var lineString = helpers.lineString
+var indexOf = require('lodash/indexOf')
 window.jQuery = window.$ = $
 
 var testing_centers
 var vertices
 var roads
+var map
 
 //import json thru ajax request
 $.when(
@@ -34,7 +38,7 @@ $.when(
 
 //initialize map
 function initialize(points){
-  var map = L.map('map').setView([14.5995, 120.9842], 14);
+  map = L.map('map').setView([14.5995, 120.9842], 14);
 
   L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
     maxZoom: 18,
@@ -145,7 +149,7 @@ function VerticesAutocomplete (vertices) {
         
         //find shortest path to nearest COVID Testing Center
         var finish = vertices.features[distances[0].id]
-        Router.createRoute(start, finish)
+        Router.createRoute(start, finish)        
       }
     }
   })
@@ -169,12 +173,9 @@ function distance(from, to, options) {
 var Router = {
   pathfinder: {}, // pathfinder object
   _points: {}, // network vertices
-  pathBboxRectangeLayer: {},
   _route: {},
-  routePath: {}, // linestring object name:path
-  routePathLayerGroup: {}, // leaflet path layer
-  planetMarkerPathPoints: [], // planets markers
-  map: {}, // leaflet map
+
+  //converts geojson to javascript graph object
   createPathFinder: function (network, map) {
     this.map = map
     this.pathFinder = new PathFinder(network, { precision: 1e-15 })
@@ -194,22 +195,81 @@ var Router = {
     console.log(this._points.features.length)
   },
 
-  // {start}, {finish}: planet features
+  // actual router function
   createRoute: function (start, finish) {
-    this._route.name = { start: start.properties.name, finish: finish.properties.name }
     var waypoints = [start, finish]
     var pathfinder = this.pathFinder
-    // check if input waypoints are included in the network vertices
-    // if not, update the waypoint to the nearest point in the network vertices
+
+    // check if input waypoints are along the roads
+    // if not, update the waypoint to the nearest point in the roads
     var actualWaypoints = waypoints.map(function (wp) {
       var nearest = nearestPoint(wp, this._points) // turf.nearestPoint()
       return nearest
     }.bind(this))
-    console.log(actualWaypoints)
-    var shortest_path = findShortestPathWithLogs(pathfinder._graph.compactedVertices, actualWaypoints[0].geometry.coordinates, actualWaypoints[1].geometry.coordinates)
+
     
+    // create path with actualwaypoints (points in the vertices)
+    var legs = actualWaypoints.map(function (wp, i, wps) {
+      if (i > 0) {
+        //get shortest path using dijkstra algo
+        var start = pathfinder._keyFn(roundCoord(wps[i - 1].geometry.coordinates, pathfinder._precision))
+        var finish = pathfinder._keyFn(roundCoord(wp.geometry.coordinates, pathfinder._precision))
+        var returnedPath = Dijkstra(pathfinder._graph.compactedVertices,start, finish)
+        console.log(returnedPath)
+        //map compacted vertices into actual vertices
+        var mappedPath = Router.mapPath(returnedPath, finish)
+        // change initial node to starting node
+        var isInitNode = indexOf(mappedPath.path[0], wps[0].geometry.coordinates[0])
+        if (isInitNode < 0) {
+          mappedPath.path.unshift(wps[0].geometry.coordinates)
+        }
+        return mappedPath
+      }
+      return []
+    }).slice(1)
+
+    console.log(legs)
+
+    //convert shortest path into geojson linestring feature
+    var route_shortest_path = lineString(legs[0].path, { name: 'shortest-path' })
+
+    //draw shortest path into map
+    actualWaypoints.map(function (wp, i , wps){
+      var lon = actualWaypoints[i].geometry.coordinates[0]
+      var lat = actualWaypoints[i].geometry.coordinates[1]
+      L.marker([lat, lon]).addTo(map)
+    })
+    L.geoJSON(route_shortest_path).addTo(map);       
+  },
+
+  mapPath: function(path, finish) {    
+    var pathfinder = this.pathFinder
+    if (path) {
+      var weight = path.distance;
+      path = path.path;
+      return {
+        path: path.reduce(function buildPath(cs, v, i, vs) {
+          if (i > 0) {
+            cs = cs.concat(pathfinder._graph.compactedCoordinates[vs[i - 1]][v]);
+          }  
+          return cs;
+        }.bind(pathfinder), []).concat([pathfinder._graph.sourceVertices[finish]]),
+        weight: weight,
+        edgeDatas: pathfinder._graph.compactedEdges 
+          ? path.reduce(function buildEdgeData(eds, v, i, vs) {
+            if (i > 0) {
+              eds.push({
+                reducedEdge: pathfinder._graph.compactedEdges[vs[i - 1]][v]
+              });
+            }
+            return eds;
+        }.bind(pathfinder), [])
+          : undefined
+        };
+    } else {
+      return null;
+    }
   }
-  
 }
 
 const shortestDistanceNode = (distances, visited) => {
@@ -225,7 +285,7 @@ const shortestDistanceNode = (distances, visited) => {
 	return shortest;
 };
 
-const findShortestPathWithLogs = (graph, startNode, endNode) => {
+const Dijkstra = (graph, startNode, endNode) => {
 	// establish object for recording distances from the start node
 	let distances = {};
 	distances[endNode] = "Infinity";
@@ -298,5 +358,3 @@ const findShortestPathWithLogs = (graph, startNode, endNode) => {
 
 	return results;
 };
-
-module.exports = findShortestPathWithLogs;
