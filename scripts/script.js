@@ -19,6 +19,7 @@ var testing_centers
 var vertices
 var roads
 var map
+var routeLayerGroup = L.layerGroup()
 
 //import json thru ajax request
 $.when(
@@ -121,6 +122,9 @@ function VerticesAutocomplete (vertices) {
     },
     callback: {
       onSubmit: function (node, form, item, event) {
+        //reset map every submit
+        map.removeLayer(routeLayerGroup)
+        routeLayerGroup.clearLayers()
         event.preventDefault()
         var start = vertices.features[item[0].id]
         var distances = []
@@ -215,7 +219,6 @@ var Router = {
         var start = pathfinder._keyFn(roundCoord(wps[i - 1].geometry.coordinates, pathfinder._precision))
         var finish = pathfinder._keyFn(roundCoord(wp.geometry.coordinates, pathfinder._precision))
         var returnedPath = Dijkstra(pathfinder._graph.compactedVertices,start, finish)
-        console.log(returnedPath)
         //map compacted vertices into actual vertices
         var mappedPath = Router.mapPath(returnedPath, finish)
         // change initial node to starting node
@@ -228,8 +231,6 @@ var Router = {
       return []
     }).slice(1)
 
-    console.log(legs)
-
     //convert shortest path into geojson linestring feature
     var route_shortest_path = lineString(legs[0].path, { name: 'shortest-path' })
 
@@ -237,11 +238,13 @@ var Router = {
     actualWaypoints.map(function (wp, i , wps){
       var lon = actualWaypoints[i].geometry.coordinates[0]
       var lat = actualWaypoints[i].geometry.coordinates[1]
-      L.marker([lat, lon]).addTo(map)
+      routeLayerGroup.addLayer(L.marker([lat, lon])) 
     })
-    L.geoJSON(route_shortest_path).addTo(map);       
+    routeLayerGroup.addLayer(L.geoJSON(route_shortest_path))
+    routeLayerGroup.addTo(map)
   },
-
+  
+  //map compacted vertices into actual vertices
   mapPath: function(path, finish) {    
     var pathfinder = this.pathFinder
     if (path) {
@@ -272,6 +275,7 @@ var Router = {
   }
 }
 
+//compare distances to determine the shortest
 const shortestDistanceNode = (distances, visited) => {
 	let shortest = null;
 
@@ -285,6 +289,7 @@ const shortestDistanceNode = (distances, visited) => {
 	return shortest;
 };
 
+//Dijkstra algorithm
 const Dijkstra = (graph, startNode, endNode) => {
 	// establish object for recording distances from the start node
 	let distances = {};
