@@ -20,6 +20,8 @@ var vertices
 var roads
 var map
 var routeLayerGroup = L.layerGroup()
+var latlng
+var newItem
 
 //import json thru ajax request
 $.when(
@@ -68,6 +70,23 @@ function initialize(points){
       },      
       onEachFeature: onEachFeature
   }).addTo(map);
+
+  var newNodePopup = function(latlng) {
+    console.log(latlng)
+    return '<div class="p-2"><h4><strong>Add New Waypoint</strong></h4>' +
+    '<label for="node_name">Waypoint Name:</label><input type="text" name="node_name" class="form-control" id="node_name" required>'+
+    '<label for="node_name">Latitude:</label><input type="text" name="node_lat" class="form-control" id="node_lat" value="'+latlng.lat+'" readonly>'+
+    '<label for="node_name">Longitude:</label><input type="text" name="node_long" class="form-control" id="node_lng" value="'+latlng.lng+'" readonly>'+
+    '</div><button class="btn btn-primary btn-sm mt-3" type="button" id="addNewNode">Submit</button></div>'
+  }
+
+  map.on('click', function(ev){
+    latlng = map.mouseEventToLatLng(ev.originalEvent);
+    var popup = L.popup()
+    .setLatLng(latlng)
+    .setContent(newNodePopup(latlng))
+    .openOn(map);
+  });
 }
 
 //display testing-centers info on click
@@ -79,19 +98,45 @@ function onEachFeature(feature, layer) {
   }
 }
 
+//function that adds new nodes
+$(document).on("click", "#addNewNode", function(){
+  var node_name = document.getElementById("node_name").value
+  var node_coords = latlng
+  console.log(node_coords)
+  map.closePopup();
+
+  //append new node to vertices json
+  var feature = {}
+  feature['type'] = 'Feature'
+  feature['geometry'] = {'type': 'Point',
+                        'coordinates': [node_coords.lng, node_coords.lat],
+                        }
+  feature['properties'] =  {'name': node_name}
+  console.log(feature)
+  vertices.features.push(feature)
+  //reset nodes
+  VerticesAutocomplete(vertices)
+})
+
 //autocomplete form input
-function VerticesAutocomplete (vertices) {
+function VerticesAutocomplete (vertices) {  
   var vertexNames = []
   var centerNames = []
 
   featureEach(vertices, function (currentFeature, featureIndex) {
+    if(featureIndex >= 1327 && featureIndex <=1339) {
+      centerNames.push({
+        id: featureIndex,
+        display: currentFeature.properties.name,
+        coordinates: currentFeature.geometry.coordinates
+      })
+    }
     vertexNames.push({
       id: featureIndex,
       display: currentFeature.properties.name,
-      coordinates: currentFeature.properties.name
+      coordinates: currentFeature.geometry.coordinates
     })
   })
-  centerNames = vertexNames.slice(-13)
   $.typeahead({
     input: '.js-typeahead',
     minLength: 1,
@@ -100,20 +145,6 @@ function VerticesAutocomplete (vertices) {
     source: {
       data: vertexNames
     },
-    multiselect: {
-      limit: 1,
-      limitTemplate: 'You can\'t select more than 2 vertices',
-      matchOn: ['id'],
-      cancelOnBackspace: true,
-      callback: {
-        onClick: function (node, item, event) {
-          console.log(item)
-        },
-        onCancel: function (node, item, event) {
-          console.log(item.display + ' Removed!')
-        }
-      }
-    },
     template: function (query, item) {
       var color = '#777'
       return '<span class="list-group">' +
@@ -121,12 +152,22 @@ function VerticesAutocomplete (vertices) {
     '</span>'
     },
     callback: {
+      onClick: function(node, a, item, event) {
+        console.log(item)
+        newItem = item
+      },
       onSubmit: function (node, form, item, event) {
+        console.log("ONSUBMIT TRIGGER")
         //reset map every submit
         map.removeLayer(routeLayerGroup)
         routeLayerGroup.clearLayers()
+
         event.preventDefault()
-        var start = vertices.features[item[0].id]
+        if(!item) {
+          item = newItem
+        }                
+        console.log(item)   
+        var start = vertices.features[item.id]
         var distances = []
 
         //calculate distance to all testing centers
@@ -153,7 +194,7 @@ function VerticesAutocomplete (vertices) {
         
         //find shortest path to nearest COVID Testing Center
         var finish = vertices.features[distances[0].id]
-        Router.createRoute(start, finish)        
+        Router.createRoute(start, finish)     
       }
     }
   })
@@ -210,7 +251,6 @@ var Router = {
       var nearest = nearestPoint(wp, this._points) // turf.nearestPoint()
       return nearest
     }.bind(this))
-
     
     // create path with actualwaypoints (points in the vertices)
     var legs = actualWaypoints.map(function (wp, i, wps) {
@@ -317,15 +357,15 @@ const Dijkstra = (graph, startNode, endNode) => {
 		for (let child in children) {
 			// make sure each child node is not the start node
 			if (String(child) === String(startNode)) {
-				console.log("don't return to the start node! 🙅");
+				//console.log("don't return to the start node! 🙅");
 				continue;
 			} else {
-				console.log("startNode: " + startNode); 
-				console.log("distance from node " + parents[node] + " to node " + node + ")");
-				console.log("previous distance: " + distances[node]);
+				//console.log("startNode: " + startNode); 
+				//console.log("distance from node " + parents[node] + " to node " + node + ")");
+				//console.log("previous distance: " + distances[node]);
 				// save the distance from the start node to the child node
 				let newdistance = distance + children[child];
-				console.log("new distance: " + newdistance);
+				//console.log("new distance: " + newdistance);
 				// if there's no recorded distance from the start node to the child node in the distances object
 				// or if the recorded distance is shorter than the previously stored distance from the start node to the child node
 				// save the distance to the object
@@ -333,9 +373,9 @@ const Dijkstra = (graph, startNode, endNode) => {
 				if (!distances[child] || distances[child] > newdistance) {
 					distances[child] = newdistance;
 					parents[child] = node;
-					console.log("distance + parents updated");
+					//console.log("distance + parents updated");
 				} else {
-					console.log("not updating, because a shorter path already exists!");
+					//console.log("not updating, because a shorter path already exists!");
 				}
 			}
 		}
